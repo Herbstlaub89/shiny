@@ -24,6 +24,7 @@ ui <- fluidPage(# Application title
                 "Upload .xlsx-file with XTT data"),
       actionButton("redraw",
                    "Plot"),
+      downloadButton("downloadPlot", "Download Plot"),
       textInput(
         "maintitle",
         "Maintitle of plot",
@@ -367,70 +368,72 @@ server <- function(input, output) {
         n = n()
       )
     
-    output$Plot <- renderPlot({
-      ######### Plot ################
-      #####  Basic setup of plot ####
-      p <- ggplot(XTTplot, aes(Harvest, FoldChange)) +
-        geom_boxplot(outlier.shape = 3, aes(group = Harvest)) +
-        coord_cartesian(ylim = c(ymini, ymaxi)) +
-        xtheme() +
-        ggtitle(maintitel, subtitel) + ylab(yaxis) + xlab(xaxis) +
-        #geom_text(data = nlabel.df, label = paste("n = ",lvlslabel)) + #number of observations/group
-        #does not work if balanceGroups is TRUE because original number is shown
-        scale_y_continuous(breaks = seq(ymini, ymaxi, 0.1)) +
-        scale_x_discrete(labels = xaxisticks)  # uncomment to manualy set x-axis ticks
-      
-      ######### postion of  lines and stars #########
-      # create list of dataframes for coordinates of lines
-      lines <- vector("list", nrow(stars))
-      starlabel <-
-        data.frame("label" = integer(),
-                   "x" = integer(),
-                   "y" = integer())
-      
-      # loop over stars dataframe and generate coordinates for lines
-      for (i in seq_along(stars[, 1])) {
-        lines[[i]] <- data.frame(
-          xli =  as.numeric(c(
-            rep(stars$poscol[i], 2),
-            rep(stars$posrow[i], 2)
-          )),
-          # i*step size,
-          # gap between lines,
-          # offset (horizontal length of line)
-          yli = c(
-            MaxFC - 2 * i * 0.025,
-            MaxFC - 2 * i * 0.025 + 0.025,
-            MaxFC - 2 * i * 0.025 + 0.025,
-            MaxFC - 2 * i * 0.025
-          )
+    ######### Plot ################
+    #####  Basic setup of plot ####
+    p <- ggplot(XTTplot, aes(Harvest, FoldChange)) +
+      geom_boxplot(outlier.shape = 3, aes(group = Harvest)) +
+      coord_cartesian(ylim = c(ymini, ymaxi)) +
+      xtheme() +
+      ggtitle(maintitel, subtitel) + ylab(yaxis) + xlab(xaxis) +
+      #geom_text(data = nlabel.df, label = paste("n = ",lvlslabel)) + #number of observations/group
+      #does not work if balanceGroups is TRUE because original number is shown
+      scale_y_continuous(breaks = seq(ymini, ymaxi, 0.1)) +
+      scale_x_discrete(labels = xaxisticks)  # uncomment to manualy set x-axis ticks
+    
+    ######### postion of  lines and stars #########
+    # create list of dataframes for coordinates of lines
+    lines <- vector("list", nrow(stars))
+    starlabel <-
+      data.frame("label" = integer(),
+                 "x" = integer(),
+                 "y" = integer())
+    
+    # loop over stars dataframe and generate coordinates for lines
+    for (i in seq_along(stars[, 1])) {
+      lines[[i]] <- data.frame(
+        xli =  as.numeric(c(
+          rep(stars$poscol[i], 2),
+          rep(stars$posrow[i], 2)
+        )),
+        # i*step size,
+        # gap between lines,
+        # offset (horizontal length of line)
+        yli = c(
+          MaxFC - 2 * i * 0.025,
+          MaxFC - 2 * i * 0.025 + 0.025,
+          MaxFC - 2 * i * 0.025 + 0.025,
+          MaxFC - 2 * i * 0.025
         )
-        
-        # loop over stars dataframe and generate coordinates for stars,
-        # x is between compared groups(mean),
-        # and y depends on MaxFC and i
-        starlabel[i, ] <- c(stars$value[i],
-                            mean(c(
-                              as.numeric(stars$poscol[i]),
-                              as.numeric(stars$posrow[i])
-                            )),
-                            (MaxFC - i * 0.025 - i * 0.025 + 0.035))
-      }
+      )
       
-      ##### draw lines ####
-      for (i in seq_along(lines)) {
-        p <- p + geom_line(data = lines[[i]], aes(x = xli, y = yli))
-      }
-      
-      #### draw stars, show plot ####
-      p <- p + geom_text(data = starlabel,
-                         aes(
-                           label = label,
-                           x = as.numeric(x),
-                           y = as.numeric(y)
-                         ))
-      
-      
+      # loop over stars dataframe and generate coordinates for stars,
+      # x is between compared groups(mean),
+      # and y depends on MaxFC and i
+      starlabel[i, ] <- c(stars$value[i],
+                          mean(c(
+                            as.numeric(stars$poscol[i]),
+                            as.numeric(stars$posrow[i])
+                          )),
+                          (MaxFC - i * 0.025 - i * 0.025 + 0.035))
+    }
+    
+    ##### draw lines ####
+    for (i in seq_along(lines)) {
+      p <- p + geom_line(data = lines[[i]], aes(x = xli, y = yli))
+    }
+    
+    #### draw stars, show plot ####
+    p <- p + geom_text(data = starlabel,
+                       aes(
+                         label = label,
+                         x = as.numeric(x),
+                         y = as.numeric(y)
+                       ))
+    
+    
+   
+    
+    output$Plot <- renderPlot({
       #### Jittered points ####
       if (showJitter) {
         p <-
@@ -448,13 +451,11 @@ server <- function(input, output) {
           xtheme() +
           scale_x_continuous(breaks = seq(ymini, ymaxi, 0.1)) +
           geom_vline(xintercept = 1)
-        gridExtra::grid.arrange(p, hist, ncol = 2)
+          gridExtra::grid.arrange(p, hist, ncol = 2)
+        
       } else {
         p
       }
-      
-      
-      
       
       
     })
@@ -469,7 +470,16 @@ server <- function(input, output) {
       data.frame(Summary)
     })
     output$Warning <- renderText("")
+    
+    output$downloadPlot <- downloadHandler(contentType = "image/png",
+      filename = function() { paste(input$file1$datapath, '.png', sep='') },
+      content = function(file) {
+        ggsave(file, plot = p, device = "png")
+      }
+    )
+    
     } else {output$Warning <- renderText("Please upload a .xlsx file with XTT data!")}
+    
   })
 }
 
