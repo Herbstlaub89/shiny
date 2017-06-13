@@ -3,6 +3,8 @@ title:
 account: herbstlaub89
 server: shinyapps.io
 appId: 188627
-bundleId: 865003
+bundleId: 865165
 url: https://herbstlaub89.shinyapps.io/shiny_test/
-when: 1497354064.00441
+when: 1497361160.84361
+asMultiple: FALSE
+asStatic: FALSE

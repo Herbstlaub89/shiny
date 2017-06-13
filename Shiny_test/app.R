@@ -12,13 +12,16 @@ library(ggplot2)
 library(readxl)
 library(dplyr)
 
-# Define UI for application that draws a histogram
+# Define UI 
 ui <- fluidPage(# Application title
   titlePanel("Boxplot Significance"),
-  
-  # Sidebar with a slider input for number of bins
-  sidebarLayout(
-    sidebarPanel(
+  # Sidebar 
+  sidebarLayout( 
+    sidebarPanel(width = 4,
+                 helpText(a(
+                   "Download .xlsx-template for data import", 
+                   href="https://www.dropbox.com/s/epovcw5ncgn3e1r/XTT_Export_R.xlsx?dl=0",
+                   target="_blank")),
       textOutput("Warning"),
       fileInput("file1",
                 "Upload .xlsx-file with XTT data"),
@@ -49,16 +52,28 @@ ui <- fluidPage(# Application title
         placeholder = "Y-axis",
         value = "Y-axis"
       ),
+      textInput(
+        inputId = "xtick", 
+        label =  "X-axis ticks (comma delimited)", 
+        value = "CTRL,24,48,72"),
+      textInput(
+        inputId = "skiprows", 
+        label =  "Rows to exclude (comma delimited)", 
+        value = "A,H"),
+      textInput(
+        inputId = "skipcolumns", 
+        label =  "Columns to exclude (comma delimited)", 
+        value = "1,6,7,12"),
       checkboxInput("showHist",
                     "Show histogram as diagnostic"),
       checkboxInput("balanceGroups",
-                    "Balance Group sizes",
+                    "Balance group sizes",
                     value = TRUE),
       checkboxInput("showJitter",
-                    "Show individual observations as jittered points"),
+                    "Show data points"),
       numericInput(
         "maxoutliers",
-        "Maximal amount of possible outliers per group, 0 = outlier detection off",
+        "Outliers to exclude per group/direction, 0 = detection off",
         max = 10,
         value = 0,
         min = 0,
@@ -112,8 +127,8 @@ server <- function(input, output) {
     
     # Rows and columns not to use
     # (eg. borders of plate or border between irradiated/control)
-    skiprows <- c("A", "H")
-    skipcolumns <- c(1, 6, 7, 12)
+    skiprows <- c(unlist(strsplit(input$skiprows,",")))
+    skipcolumns <- c(as.numeric(unlist(strsplit(input$skipcolumns,","))))
     
     # Main-, sub- and axis titel of plot
     maintitel <- input$maintitle
@@ -122,7 +137,7 @@ server <- function(input, output) {
     yaxis <- input$ytitle
     
     # Labels for the ticks on the x axis
-    xaxisticks <- c("CTRL", "24", "48", "72")
+    xaxisticks <- strsplit(input$xtick,",")
     
     ### Balance group sizes?
     # Otherwise a controlgroup with more observations can lead
