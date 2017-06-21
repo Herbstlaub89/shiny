@@ -13,7 +13,8 @@ library(readxl)
 library(dplyr)
 
 # Define UI 
-ui <- fluidPage(# Application title
+ui <- fluidPage(
+  # Application title
   titlePanel("Boxplot Significance"),
   # Sidebar 
   sidebarLayout( 
@@ -98,9 +99,10 @@ ui <- fluidPage(# Application title
     ),
     mainPanel(
       plotOutput("Plot"),
-      h3("Summary statistics:"),
+      h3("Summary:"),
       tableOutput("Summary"),
-      h3("List of found outliers:"),
+      tableOutput("Summary_"),
+      h3("Outliers:"),
       tableOutput("Outliers"),
       tableOutput("Table")
     )
@@ -373,13 +375,25 @@ server <- function(input, output) {
     nlabel.df <- data.frame(Harvest = lvls,
                             FoldChange = ymini)
     
+    # Summary for all plates seperatly
     Summary <- XTTplot %>%
+      group_by(Harvest, Plate) %>%
+      summarise(
+        meanFC = mean(FoldChange),
+        sdFC = sd(FoldChange),
+        meanData = mean(Data),
+        sdData = sd(Data),
+        n = n()
+      )
+    
+    # Group Summary
+    Summary_ <- XTTplot %>%
       group_by(Harvest) %>%
       summarise(
         meanFC = mean(FoldChange),
         sdFC = sd(FoldChange),
-        meanRaw = mean(Data),
-        sdRaw = sd(Data),
+        meanData = mean(Data),
+        sdData = sd(Data),
         n = n()
       )
     
@@ -445,9 +459,6 @@ server <- function(input, output) {
                          y = as.numeric(y)
                        ))
     
-    
-   
-    
     output$Plot <- renderPlot({
       #### Jittered points ####
       if (showJitter) {
@@ -483,6 +494,9 @@ server <- function(input, output) {
     })
     output$Summary <- renderTable({
       data.frame(Summary)
+    })
+    output$Summary_ <- renderTable({
+      data.frame(Summary_)
     })
     output$Warning <- renderText("")
     
